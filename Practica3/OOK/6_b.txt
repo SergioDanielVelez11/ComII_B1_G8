@@ -1,0 +1,51 @@
+import numpy as np
+from gnuradio import gr
+import math
+
+class blk(gr.sync_block):  
+    """
+    Este bloque es un Oscilador Controlado por Voltaje en banda base (VCO de banda base o CE VCO) para GNU Radio.
+
+    Funcionalidad:
+    Genera una señal compleja cuya amplitud y fase son controladas dinámicamente por dos señales de entrada.
+    La salida se calcula como:
+        y[n] = A[n] * exp(j * Q[n])
+    donde:
+        - A[n] es la señal de control de amplitud (primer puerto de entrada, arriba)
+        - Q[n] es la señal de control de fase (segundo puerto de entrada, abajo)
+        - j es la unidad imaginaria (sqrt(-1))
+
+    Parámetros:
+    - Este bloque no requiere parámetros adicionales en su inicialización.
+
+    Entradas:
+    - Entrada 0 (A): Señal de control de amplitud (float32). Modula la magnitud de la señal de salida.
+    - Entrada 1 (Q): Señal de control de fase (float32). Modula el ángulo de fase de la señal de salida.
+
+    Salida:
+    - Salida 0 (y): Señal compleja (complex64) con amplitud y fase moduladas dinámicamente.
+
+    Recomendaciones de uso:
+    - Asegúrese de que ambas señales de entrada estén sincronizadas y tengan la misma longitud.
+    - Úselo para generar señales moduladas en fase (PM) o en frecuencia (FM) en banda base.
+    - Ideal para sistemas SDR que requieren generación de portadoras complejas con control dinámico.
+    """
+
+    def __init__(self):  
+        # Inicializa el bloque con nombre, señales de entrada (2 flotantes) y salida (1 compleja)
+        gr.sync_block.__init__(
+            self,
+            name='e_CE_VCO_fc',   
+            in_sig=[np.float32, np.float32],  # Entradas: amplitud y fase
+            out_sig=[np.complex64]            # Salida: señal compleja
+        )
+        
+    def work(self, input_items, output_items):
+        A = input_items[0]  # Entrada de amplitud
+        Q = input_items[1]  # Entrada de fase
+        y = output_items[0] # Salida del bloque
+        N = len(A)          # Número de muestras a procesar
+        # Calcula la señal de salida como una exponencial compleja con amplitud A y fase Q
+        y[:] = A * np.exp(1j * Q)
+        return len(output_items[0])  # Retorna el número de muestras procesadas
+

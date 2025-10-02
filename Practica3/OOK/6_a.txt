@@ -1,0 +1,59 @@
+import numpy as np
+from gnuradio import gr
+import math
+
+class blk(gr.sync_block):  
+    """
+    Este bloque es un Oscilador Controlado por Voltaje (VCO) para señales de RF, implementado en GNU Radio.
+
+    Funcionalidad:
+    Genera una señal cosenoidal cuya amplitud y fase son controladas dinámicamente por dos señales de entrada.
+    La salida se calcula como:
+        y[n] = A[n] * cos(2π * fc * n / samp_rate + Q[n])
+    donde:
+        - A[n] es la señal de control de amplitud (primer puerto de entrada, arriba)
+        - Q[n] es la señal de control de fase (segundo puerto de entrada, abajo)
+        - fc es la frecuencia portadora
+        - samp_rate es la tasa de muestreo
+        - n es el índice de muestra, que se lleva internamente para mantener la continuidad de fase
+
+    Parámetros:
+    - fc (float): Frecuencia portadora en Hz. Por defecto es 128000 Hz.
+    - samp_rate (float): Tasa de muestreo en Hz. Por defecto es 320000 Hz.
+
+    Entradas:
+    - Entrada 0 (A): Señal de control de amplitud (float32). Modula la amplitud de la señal de salida.
+    - Entrada 1 (Q): Señal de control de fase (float32). Modula la fase de la señal de salida.
+
+    Salida:
+    - Salida 0 (y): Señal cosenoidal con amplitud y fase moduladas dinámicamente (float32).
+
+    Recomendaciones de uso:
+    - Asegúrese de que ambas señales de entrada estén sincronizadas y tengan la misma longitud.
+    - Úselo para simular esquemas de modulación RF o generar señales de prueba con control ajustable.
+    - Ideal para aplicaciones SDR que requieren generación flexible de formas de onda.
+    """
+
+    def __init__(self, fc=128000, samp_rate=320000):  
+        # Inicialización del bloque con nombre, señales de entrada y salida
+        gr.sync_block.__init__(
+            self,
+            name='e_RF_VCO_ff',   
+            in_sig=[np.float32, np.float32],  # Dos entradas: amplitud y fase
+            out_sig=[np.float32]              # Una salida: señal modulada
+        )
+        self.fc = fc  # Frecuencia portadora
+        self.samp_rate = samp_rate  # Tasa de muestreo
+        self.n_m = 0  # Contador de muestras para mantener continuidad de fase
+
+    def work(self, input_items, output_items):
+        A = input_items[0]  # Entrada de amplitud
+        Q = input_items[1]  # Entrada de fase
+        y = output_items[0] # Salida del bloque
+        N = len(A)  # Número de muestras a procesar
+        n = np.linspace(self.n_m, self.n_m + N - 1, N)  # Índices de muestra
+        self.n_m += N  # Actualiza el contador de muestras
+        # Calcula la señal de salida con modulación en amplitud y fase
+        y[:] = A * np.cos(2 * math.pi * self.fc * n / self.samp_rate + Q)
+        return len(output_items[0])  # Retorna el número de muestras procesadas
+
