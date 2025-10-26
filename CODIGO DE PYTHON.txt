@@ -1,0 +1,84 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parámetros de modulación
+M = 8
+N_symbols = 200
+samples_per_symbol = 16
+SNR_dB = 20
+
+# Generación de bits y asignación de fases
+bits = np.random.randint(0, 2, int(np.log2(M) * N_symbols))
+symbols = bits.reshape((-1, int(np.log2(M))))
+decimal = symbols.dot(1 << np.arange(symbols.shape[-1] - 1, -1, -1))
+phases = 2 * np.pi * decimal / M
+
+s_ec = np.exp(1j * phases)
+s_ec_upsampled = np.repeat(s_ec, samples_per_symbol)
+
+# Señal temporal
+plt.figure(figsize=(8, 3))
+plt.plot(np.real(s_ec_upsampled[:300]), label='Componente I')
+plt.plot(np.imag(s_ec_upsampled[:300]), label='Componente Q')
+plt.xlabel("Muestras")
+plt.ylabel("Amplitud")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Densidad espectral de potencia
+S_f = np.fft.fftshift(np.fft.fft(s_ec_upsampled))
+freqs = np.fft.fftshift(np.fft.fftfreq(len(s_ec_upsampled), d=1))
+PSD = 10 * np.log10(np.abs(S_f)**2 / len(S_f))
+
+plt.figure(figsize=(8, 3))
+plt.plot(freqs, PSD)
+plt.xlabel("Frecuencia normalizada")
+plt.ylabel("Potencia [dB]")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Diagrama de constelación sin ruido
+plt.figure(figsize=(4, 4))
+plt.scatter(np.real(s_ec), np.imag(s_ec), color='blue', s=20)
+plt.xlabel("Eje I")
+plt.ylabel("Eje Q")
+plt.axis("equal")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Diagrama de constelación con ruido
+SNR_linear = 10**(SNR_dB/10)
+P_signal = np.mean(np.abs(s_ec)**2)
+noise_power = P_signal / SNR_linear
+noise = np.sqrt(noise_power/2) * (np.random.randn(len(s_ec)) + 1j*np.random.randn(len(s_ec)))
+s_noisy = s_ec + noise
+
+plt.figure(figsize=(4, 4))
+plt.scatter(np.real(s_noisy), np.imag(s_noisy), color='red', s=20, alpha=0.6)
+plt.xlabel("Eje I")
+plt.ylabel("Eje Q")
+plt.axis("equal")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Comparación entre QPSK y 8-PSK
+def constellation_points(M):
+    return np.exp(1j * 2 * np.pi * np.arange(M) / M)
+
+plt.figure(figsize=(5, 5))
+plt.scatter(np.real(constellation_points(4)), np.imag(constellation_points(4)),
+            s=80, label='QPSK', color='green', marker='x', linewidths=2)
+plt.scatter(np.real(constellation_points(8)), np.imag(constellation_points(8)),
+            s=50, label='8-PSK', color='blue', marker='o')
+plt.xlabel("Eje I")
+plt.ylabel("Eje Q")
+plt.axis("equal")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
